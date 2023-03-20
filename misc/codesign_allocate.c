@@ -1047,6 +1047,8 @@ struct object *object)
 }
 
 
+// I embedded libcodirectory in libstuff.a so this doesn't affect us
+#if 0
 // codesign_allocate use libstuff.a which calls some functions from libcodirectory.dylib
 // The code paths codesign_allocate takes in libstuff.a never use libcodirectory.dylib
 // but it must be linked.  MRM copies the codesign_allocate tool to a new location, which
@@ -1071,4 +1073,4 @@ void libcd_free() {
     fprintf(stderr, "libcd_ functions should not be called in codesign_allocate");
     exit(EXIT_FAILURE);
 }
-
+#endif

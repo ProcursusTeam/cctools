@@ -49,7 +49,11 @@
 #include "stuff/write64.h"
 #include "stuff/diagnostics.h"
 #ifdef TRIE_SUPPORT
-#include <mach-o/prune_trie.h>
+#if __has_include(<mach-o/prune_trie.h>)
+# include <mach-o/prune_trie.h>
+#else
+# include <prune_trie.h>
+#endif
 #endif /* TRIE_SUPPORT */
 
 /* These are set from the command line arguments */

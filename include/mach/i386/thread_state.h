@@ -36,7 +36,9 @@
 #define I386_THREAD_STATE_MAX	(614)    /* Size of biggest state possible */
 
 #if defined (__i386__) || defined(__x86_64__)
+#ifndef THREAD_STATE_MAX
 #define THREAD_STATE_MAX	I386_THREAD_STATE_MAX
+#endif
 #endif
 
 #endif	/* _MACH_I386_THREAD_STATE_H_ */

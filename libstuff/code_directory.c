@@ -146,7 +146,7 @@ static const char* format_version_xyz(uint32_t version)
  */
 int codedir_is_linker_signed(const char* data, uint32_t size)
 {
-#if 1
+#if 0
     // HACK: libcodedirectory.h is in both the macOS SDK in /usr/local/include, and in the tool chain at /usr/include.
     // but there is no way to control clang's search path to look in the toolchain first.
     // So, declare newer API locally. Once this new header is in all SDKs we can remove this.
