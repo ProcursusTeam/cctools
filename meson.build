@@ -6,7 +6,7 @@ add_global_arguments('-DCURRENT_PROJECT_VERSION="' + meson.project_version() + '
 add_global_arguments('-DCODEDIRECTORY_SUPPORT', language : 'c')
 add_global_arguments('-DLTO_SUPPORT', language : 'c')
 
-ld64_proj = subproject('ld64', required : false)
+ld64_proj = subproject('ld64', default_options : 'program-prefix=' + get_option('program-prefix'), required : false)
 if ld64_proj.found()
   libprunetrie_dep = ld64_proj.get_variable('libprunetrie_dep')
 endif
