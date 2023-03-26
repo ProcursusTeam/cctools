@@ -8,6 +8,7 @@
 #include "dyld_bind_info.h"
 #include "fixup-chains.h"
 #include "stuff/guess_short_name.h"
+#include <libkern/OSByteOrder.h>
 
 /*****************************************************************************
  *

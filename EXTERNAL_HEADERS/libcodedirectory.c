@@ -15,9 +15,13 @@
 #include <sys/mman.h>
 #include <sys/queue.h>
 
+#if HAVE_CORECRYPTO
 #include <corecrypto/ccdigest.h>
 #include <corecrypto/ccsha1.h>
 #include <corecrypto/ccsha2.h>
+#else
+#include <openssl/sha.h>
+#endif
 
 #define LIBCD_HAS_PLATFORM_VERSION 1
 #include "libcodedirectory.h"
@@ -458,13 +462,41 @@ void libcd_set_exec_seg (libcd *s, uint64_t base, uint64_t limit, uint64_t flags
 
 struct _hash_info {
     size_t hash_len;
+#if HAVE_CORECRYPTO
     const struct ccdigest_info *(*di)(void);
+#else
+    int algo;
+#endif
 };
 
+#if !HAVE_CORECRYPTO
+void
+no_ccdigest_hash_stuff(int algo, const void *data, size_t len, unsigned char *hash)
+{
+    if (algo == CS_HASHTYPE_SHA1) {
+        SHA_CTX *ctx = NULL;
+        SHA1_Init(ctx);
+        SHA1_Update(ctx, data, len);
+        SHA1_Final(hash, ctx);
+    } else if (algo == CS_HASHTYPE_SHA256) {
+        SHA256_CTX *ctx = NULL;
+        SHA256_Init(ctx);
+        SHA256_Update(ctx, data, len);
+        SHA256_Final(hash, ctx);
+    }
+}
+#endif
+
 static const struct _hash_info _known_hash_types[] = {
-    { 0, NULL },
+#if HAVE_CORECRYPTO
+    { 0 NULL },
     { CS_SHA1_LEN, ccsha1_di }, // CS_HASHTYPE_SHA1
     { CS_SHA256_LEN, ccsha256_di }, // CS_HASHTYPE_SHA256
+#else
+    { 0, 0 },
+    { CS_SHA1_LEN, CS_HASHTYPE_SHA1 }, // CS_HASHTYPE_SHA1
+    { CS_SHA256_LEN, CS_HASHTYPE_SHA256 }, // CS_HASHTYPE_SHA256
+#endif
     // { 0, NULL }, // CS_HASHTYPE_SHA256_TRUNCATED, unsupported
     // { 0, NULL }, // CS_HASHTYPE_SHA384, unsupported
 };
@@ -780,8 +812,10 @@ _libcd_hash_page(libcd *s,
     uint8_t page_hash[_max_known_hash_len] = {0};
     const unsigned int page_no = (unsigned int)page_idx;
 
+#if HAVE_CORECRYPTO
     struct ccdigest_info const *di = hi->di();
     ccdigest_di_decl(di, ctx);
+#endif
 
     const size_t pos = page_idx * _cs_page_bytes;
     uint8_t page[_cs_page_bytes] = {0};
@@ -793,9 +827,13 @@ _libcd_hash_page(libcd *s,
         return LIBCD_SERIALIZE_READ_PAGE_ERROR;
     }
 
+#if HAVE_CORECRYPTO
     ccdigest_init(di, ctx);
     ccdigest_update(di, ctx, read_bytes, page);
     ccdigest_final(di, ctx, page_hash);
+#else
+    no_ccdigest_hash_stuff(hi->algo, page, read_bytes, page_hash);
+#endif
 
     memcpy(hash_destination, page_hash, hi->hash_len);
 
@@ -893,16 +931,22 @@ _libcd_serialize_cd (libcd *s, uint32_t hash_type)
     //// code directory hashes
     {
         if (s->special_slot_count > 0) {
+#if HAVE_CORECRYPTO
             struct ccdigest_info const *di = hi->di();
             ccdigest_di_decl(di, ctx);
+#endif
 
             uint8_t *special_slot_buf = calloc(s->special_slot_count, hi->hash_len);
 
             struct _sslot_data *sslot = NULL;
             SLIST_FOREACH(sslot, &s->sslot_data, entries) {
+#if HAVE_CORECRYPTO
                 ccdigest_init(di, ctx);
                 ccdigest_update(di, ctx, sslot->len, sslot->data);
                 ccdigest_final(di, ctx, special_slot_buf + (s->special_slot_count-sslot->slot)*hi->hash_len);
+#else
+                no_ccdigest_hash_stuff(hi->algo, sslot->data, sslot->len, special_slot_buf + (s->special_slot_count-sslot->slot)*hi->hash_len);
+#endif
             }
             memcpy(cursor, special_slot_buf, s->special_slot_count*hi->hash_len);
             cursor += s->special_slot_count*hi->hash_len;
@@ -948,17 +992,23 @@ _libcd_serialize_cd (libcd *s, uint32_t hash_type)
 
     //Record the cdhash for this codedirectory
     {
+#if HAVE_CORECRYPTO
         struct ccdigest_info const *di = hi->di();
         ccdigest_di_decl(di, ctx);
+#endif
         uint8_t *cdhash_buf = calloc(1, hi->hash_len);
         if (cdhash_buf == NULL) {
             _libcd_err("Failed to allocated memory for cdhash");
             free(cd_mem);
             return LIBCD_SERIALIZE_NO_MEM;
         }
+#if HAVE_CORECRYPTO
         ccdigest_init(di, ctx);
         ccdigest_update(di, ctx, cd_size, cd_mem);
         ccdigest_final(di, ctx, cdhash_buf);
+#else
+        no_ccdigest_hash_stuff(hi->algo, cd_mem, cd_size, cdhash_buf);
+#endif
 
         for (size_t i = 0; i < s->hash_types_count; i++) {
             if (s->cdhashes[i].set) {

@@ -1160,9 +1160,13 @@ replace_sections(void)
 	   == -1)
 	    system_fatal("can't create output file: %s", output);
 
+#if __APPLE__
 	if((r = vm_allocate(mach_task_self(), &pad_addr, pagesize, 1)) !=
 	   KERN_SUCCESS)
 	    mach_fatal(r, "vm_allocate() failed");
+#else
+	pad_addr = (vm_address_t)calloc(1, pagesize);
+#endif
 
 	k = 0;
 	for(i = 0; i < nsegs; i++){
@@ -1193,11 +1197,15 @@ replace_sections(void)
 				system_error("can't close file: %s to replace "
 					 "section (%s,%s) with", rp->filename,
 					 rp->segname, rp->sectname);
+#if __APPLE__
 			    if((r = vm_deallocate(mach_task_self(),
 						  (vm_address_t)sect_addr,
 						  rp->size)) != KERN_SUCCESS)
 				mach_fatal(r, "Can't deallocate memory for "
 				   "mapped file: %s", rp->filename);
+#else
+			    munmap(sect_addr, rp->size);
+#endif
 			}
 			else{
 			    /* write the original section */
@@ -1248,11 +1256,15 @@ replace_sections(void)
 				system_error("can't close file: %s to replace "
 					 "section (%s,%s) with", rp->filename,
 					 rp->segname, rp->sectname);
+#if __APPLE__
 			    if((r = vm_deallocate(mach_task_self(),
 						  (vm_address_t)sect_addr,
 						  rp->size)) != KERN_SUCCESS)
 				mach_fatal(r, "Can't deallocate memory for "
 				   "mapped file: %s", rp->filename);
+#else
+			    munmap(sect_addr, rp->size);
+#endif
 			}
 			else{
 			    /* write the original section */

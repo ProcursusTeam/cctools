@@ -1,4 +1,4 @@
-as_inc = [include_directories('.')]
+as_inc += include_directories('.')
 
 as_driver_srcs = files('driver.c')
 
@@ -9,3 +9,12 @@ as_srcs = files('hash.c', 'messages.c', 'xmalloc.c', 'app.c', 'flonum-copy.c',
 
 as_arm_srcs = files('arm.c')
 as_i386_srcs = files('i386.c')
+
+as = executable(get_option('program-prefix') + 'as', as_driver_srcs,
+  link_with : libstuff,
+  include_directories : incdirs,
+  install : true)
+
+subdir('arm')
+subdir('i386')
+subdir('x86_64')

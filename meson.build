@@ -5,6 +5,9 @@ project('cctools', ['c', 'cpp'],
 add_global_arguments('-DCURRENT_PROJECT_VERSION="' + meson.project_version() + '"', language : 'c')
 add_global_arguments('-DCODEDIRECTORY_SUPPORT', language : 'c')
 add_global_arguments('-DLTO_SUPPORT', language : 'c')
+add_global_arguments('-Wno-macro-redefined', language : 'c')
+
+cc = meson.get_compiler('c')
 
 ld64_proj = subproject('ld64', default_options : 'program-prefix=' + get_option('program-prefix'), required : false)
 if ld64_proj.found()
@@ -13,8 +16,6 @@ endif
 
 incdirs = []
 
-subdir('ar.d')
-subdir('as.d')
 subdir('include')
 subdir('libstuff')
 subdir('misc')
@@ -24,41 +25,25 @@ subdir('man')
 subdir('EXTERNAL_HEADERS')
 
 llvm_dep = dependency('llvm', modules : ['lto'])
+blocks_dep = dependency('blocks')
+
+deps = [blocks_dep, llvm_dep.partial_dependency(includes : true, compile_args : true)]
+
+libstuff_cflags = []
+if cc.has_header('corecrypto/ccdigest.h')
+  libstuff_cflags += '-DHAVE_CORECRYPTO'
+else
+  openssl_dep = dependency('openssl')
+  deps += openssl_dep
+endif
 
 libstuff = static_library('stuff', libstuff_srcs,
-  dependencies : llvm_dep.partial_dependency(includes : true, compile_args : true),
+  dependencies : deps,
+  c_args : libstuff_cflags,
   include_directories : [incdirs, libstuff_inc])
 
-ar = executable(get_option('program-prefix') + 'ar', ar_srcs,
-  link_with : libstuff,
-  include_directories : incdirs,
-  install : true)
-
-as = executable(get_option('program-prefix') + 'as', as_driver_srcs,
-  link_with : libstuff,
-  include_directories : incdirs,
-  install : true)
-
-as_arm = executable('as_arm', as_srcs, as_arm_srcs,
-  link_with : libstuff,
-  include_directories : [incdirs, as_inc],
-  c_args : ['-DARM', '-DNeXT_MOD'],
-  install_dir : get_option('libexecdir'),
-  install : true)
-
-as_i386 = executable('as_i386', as_srcs, as_i386_srcs,
-  link_with : libstuff,
-  include_directories : [incdirs, as_inc],
-  c_args : ['-DI386', '-DI486', '-DI586', '-DI686', '-DNeXT_MOD'],
-  install_dir : get_option('libexecdir'),
-  install : true)
-
-as_x86_64 = executable('as_x86_64', as_srcs, as_i386_srcs,
-  link_with : libstuff,
-  include_directories : [incdirs, as_inc],
-  c_args : ['-DI386', '-DI486', '-DI586', '-DI686', '-DARCH64', '-DNeXT_MOD'],
-  install_dir : get_option('libexecdir'),
-  install : true)
+subdir('ar')
+subdir('as')
 
 bitcode_strip = executable(get_option('program-prefix') + 'bitcode_strip', bitcode_strip_srcs,
   link_with : libstuff,

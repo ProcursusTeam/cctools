@@ -385,10 +385,14 @@ char *out_file_name)
 	 * Create the buffer to copy the parts of the output file into.
 	 */
 	output_size = offset;
+#if __APPLE__
 	if((r = vm_allocate(mach_task_self(), (vm_address_t *)&output_addr,
 			    output_size, TRUE)) != KERN_SUCCESS)
 	    as_fatal("can't vm_allocate() buffer for output file of size %u",
 		     output_size);
+#else
+	output_addr = calloc(1, output_size);
+#endif
 
 	/* put the headers in the output file's buffer */
 	host_byte_sex = get_host_byte_sex();

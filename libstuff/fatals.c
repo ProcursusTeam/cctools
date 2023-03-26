@@ -122,7 +122,11 @@ char *format,
 	va_start(ap, format);
         fprintf(stderr, "fatal error: %s: ", progname);
 	vfprintf(stderr, format, ap);
+#if __APPLE__
 	fprintf(stderr, " (%s)\n", mach_error_string(r));
+#else
+	fprintf(stderr, "\n");
+#endif
 	va_end(ap);
 
 	if (diagnostics_enabled()) {
@@ -133,7 +137,9 @@ char *format,
 	    if (stream) {
 		va_start(ap, format);
 		vfprintf(stream, format, ap);
+#if __APPLE__
 		fprintf(stream, " (%s)", mach_error_string(r));
+#endif
 		va_end(ap);
 		fclose(stream);
 		diagnostics_log_msg(FATAL, buf);

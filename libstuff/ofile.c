@@ -871,8 +871,10 @@ enum bool archives_with_fat_objects)
 	addr = NULL;
 	if(size != 0){
 	    // <rdar://29161359> try mmap() with MAP_RESILIENT_CODESIGN to allow corrupt files to be re-code signed
+#ifdef MAP_RESILIENT_CODESIGN
 	    addr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_FILE|MAP_PRIVATE|MAP_RESILIENT_CODESIGN, fd,0);
 	    if (addr == MAP_FAILED)
+#endif
 		addr = mmap(0, size, PROT_READ|PROT_WRITE, MAP_FILE|MAP_PRIVATE, fd,0);
 	    if((intptr_t)addr == -1){
 		system_error("can't map file: %s", file_name);
@@ -1487,12 +1489,16 @@ struct ofile *ofile)
     kern_return_t r;
 
 	if(ofile->file_addr != NULL){
+#if __APPLE__
 	    if((r = vm_deallocate(mach_task_self(),
 				 (vm_address_t)ofile->file_addr,
 				 (vm_size_t)ofile->file_size)) != KERN_SUCCESS){
 		my_mach_error(r, "Can't vm_deallocate mapped memory for file: "
 			      "%s", ofile->file_name);
 	    }
+#else
+		munmap(ofile->file_addr, ofile->file_size);
+#endif
 	}
 	if(ofile->file_name != NULL)
 	    free(ofile->file_name);

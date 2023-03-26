@@ -1,1 +1,1 @@
-as_inc += include_directories('.')
+as_inc = [include_directories('.')]

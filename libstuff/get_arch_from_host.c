@@ -44,6 +44,7 @@ get_arch_from_host(
 struct arch_flag *family_arch_flag,
 struct arch_flag *specific_arch_flag)
 {
+#if __APPLE__
     struct host_basic_info host_basic_info;
     unsigned int count;
     kern_return_t r;
@@ -540,5 +541,21 @@ struct arch_flag *specific_arch_flag)
 	    break;
 	}
 	return(0);
+#else
+	// Default to arm64 on non-darwin, cause I don't care
+	if(family_arch_flag != NULL) {
+		memset(family_arch_flag, '\0', sizeof(struct arch_flag));
+		family_arch_flag->name = "arm64";
+		family_arch_flag->cputype = CPU_TYPE_ARM64;
+		family_arch_flag->cpusubtype = CPU_SUBTYPE_ARM64_ALL;
+	}
+	if(specific_arch_flag != NULL) {
+		memset(specific_arch_flag, '\0', sizeof(struct arch_flag));
+		specific_arch_flag->name = "arm64";
+		specific_arch_flag->cputype = CPU_TYPE_ARM64;
+		specific_arch_flag->cpusubtype = CPU_SUBTYPE_ARM64_ALL;
+	}
+	return(0);
+#endif
 }
 #endif /* !defined(RLD) */

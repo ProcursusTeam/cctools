@@ -138,7 +138,9 @@ uint32_t *throttle)
     time_t timep[2];
     time_t toc_time;
 #endif
+#if __APPLE__
     mach_port_t my_mach_host_self;
+#endif
     char *file, *p;
     uint64_t file_size;
     enum bool seen_archive;
@@ -207,13 +209,16 @@ uint32_t *throttle)
             struct timezone tz;
             uint32_t bytes_written, bytes_per_second, write_size;
             double time_used, time_should_have_took, usecs_to_kill;
+#if __APPLE__
             static struct host_sched_info info = { 0 };
             unsigned int count;
             kern_return_t r;
+#endif
 
             p = file;
             bytes_written = 0;
             bytes_per_second = 0;
+#if __APPLE_
             count = HOST_SCHED_INFO_COUNT;
             my_mach_host_self = mach_host_self();
             if((r = host_info(my_mach_host_self, HOST_SCHED_INFO, (host_info_t)
@@ -222,6 +227,7 @@ uint32_t *throttle)
                 my_mach_error(r, "can't get host sched info");
             }
             mach_port_deallocate(mach_task_self(), my_mach_host_self);
+#endif
             if(gettimeofday(&start, &tz) == -1)
                 goto no_throttle;
 #undef THROTTLE_DEBUG
@@ -321,11 +327,15 @@ no_throttle:
 	    }
 	}
 cleanup:
+#if __APPLE__
 	if((r = vm_deallocate(mach_task_self(), (vm_address_t)file,
 			      file_size)) != KERN_SUCCESS){
 	    my_mach_error(r, "can't vm_deallocate() buffer for output file");
 	    return;
 	}
+#else
+	free(file);
+#endif
 }
 
 /*
@@ -516,10 +526,14 @@ enum bool *seen_archive)
 	 * This buffer is vm_allocate'ed to make sure all holes are filled with
 	 * zero bytes.
 	 */
+#if __APPLE__
 	if((r = vm_allocate(mach_task_self(), (vm_address_t *)&file,
 			    file_size, TRUE)) != KERN_SUCCESS)
 	    mach_fatal(r, "can't vm_allocate() buffer for output file: %s of "
 		       "size %llu", filename, file_size);
+#else
+	file = calloc(1, file_size);
+#endif
 
 	/*
 	 * If there is more than one architecture then fill in the fat file
