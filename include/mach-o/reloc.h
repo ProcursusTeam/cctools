@@ -200,4 +200,8 @@ enum reloc_type_generic
     GENERIC_RELOC_TLV		/* thread local variables */
 };
 
+#ifndef CPU_TYPE_RISCV32
+#define CPU_TYPE_RISCV32 24
+#endif
+
 #endif /* _MACHO_RELOC_H_ */
