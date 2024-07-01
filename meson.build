@@ -1,5 +1,5 @@
 project('cctools', ['c', 'cpp'],
-  version : '986',
+  version : '1010.6',
   default_options : ['c_std=gnu11', 'cpp_std=gnu++14'])
 
 add_global_arguments('-DCURRENT_PROJECT_VERSION="' + meson.project_version() + '"', language : 'c')
